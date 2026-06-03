@@ -41,3 +41,11 @@ That blocks packages newer than 7 days to reduce exposure to supply-chain attack
 - `bun run format:check`: verifies formatting without changing files
 - `bun run check`: runs typecheck, lint, format verification, and production
   build
+
+## Source Structure
+
+- `src/components/`: React components, including the root `App.tsx`
+- `src/constants/`: shared constants and CSS tokens
+- `src/hooks/`: reusable hooks
+- `src/global.css`: the only stylesheet outside of `components/`
+- `src/main.tsx`: app entry point

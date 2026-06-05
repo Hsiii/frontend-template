@@ -1,6 +1,13 @@
 # hsi-app
 
-A reusable baseline repo for frontend projects with:
+A reusable frontend baseline that is maintained in two forms:
+
+- Template repo: use this repository as the source template for new frontend
+  apps.
+- Package artifact: install the published package from npm as `hsi-app` or
+  from GitHub Packages as `@hsiii/hsi-app`.
+
+The template includes:
 
 - Bun package management
 - Vite for dev/build

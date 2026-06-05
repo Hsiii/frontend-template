@@ -1,0 +1,16 @@
+{
+    "name": "create-hsi-app",
+    "version": "0.1.1",
+    "type": "module",
+    "description": "Create a new app from the hsi-app frontend template.",
+    "bin": {
+        "create-hsi-app": "bin/create-hsi-app.mjs"
+    },
+    "files": [
+        "bin"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
+    "license": "UNLICENSED"
+}

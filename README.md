@@ -20,6 +20,33 @@ The template includes:
 - VS Code extension recommendations for spellcheck and CSS nesting syntax highlighting
 - VS Code settings for format-on-save and explicit ESLint fixes on save
 
+## Usage
+
+Create a new app from the GitHub template:
+
+```bash
+gh repo create my-app --template Hsiii/frontend-template --clone
+cd my-app
+bun i
+bun run dev
+```
+
+Install the published package from npm:
+
+```bash
+npm install hsi-app
+```
+
+Install the published package from GitHub Packages:
+
+```bash
+npm install @hsiii/hsi-app --registry=https://npm.pkg.github.com
+```
+
+This repo is not currently an `npm create` initializer. To support a command
+like `npm create hsi-app@latest`, publish a separate initializer package named
+`create-hsi-app`.
+
 ## Install
 
 ```bash

@@ -1,20 +1,8 @@
 # create-hsi-app
 
-Scaffold an opinionated Vite + React + TypeScript frontend with strict checks, curated defaults, and package-age gating for supply-chain security.
+Scaffold an opinionated Vite + React + TypeScript app with strict checks, curated defaults, and package-age gating for supply-chain security.
 
-## What This Is
-
-This repo has two roles:
-
-- package: the published CLI entrypoint for starting a new app
-- template repo: the source template that the CLI clones and rewrites
-
-The generated app stays intentionally small, but it comes with enough structure
-to start building immediately.
-
-## What You Get
-
-Small but robust app includes:
+## The Stack
 
 - Vite
 - React 19
@@ -28,8 +16,7 @@ Small but robust app includes:
 - Package-manager-specific package-age gating
 
 ## Getting Started
-
-Run any one of these to scaffold a new app in the current directory.
+Run any one of these:
 
 ### npm
 
@@ -65,7 +52,7 @@ The package manager for the scaffolded app can be specified, default to bun:
 Example:
 
 ```bash
-bun create hsi-app@latest --pnpm
+npm create hsi-app@latest --pnpm
 ```
 
 ## Scripts

@@ -44,6 +44,7 @@ async function main() {
         currentVersionPublished
     );
     const nextTag = `v${nextVersion}`;
+    assertTagAvailable(nextTag, nextVersion === currentVersion);
 
     if (nextVersion !== currentVersion) {
         rootPackageJson.version = nextVersion;
@@ -78,7 +79,7 @@ async function main() {
             `chore: release create-hsi-app ${nextTag}`,
         ]);
     }
-    run('git', ['tag', nextTag]);
+    createTagIfNeeded(nextTag);
     run('git', ['push', 'origin', 'main']);
     run('git', ['push', 'origin', nextTag]);
     loginToNpm();
@@ -101,6 +102,23 @@ function assertCleanWorktree() {
 
 async function resolveReleaseVersion(currentVersion, currentVersionPublished) {
     if (!currentVersionPublished) {
+        const currentTag = `v${currentVersion}`;
+        const currentTagCommit = getLocalTagCommit(currentTag);
+        const currentHeadCommit = getHeadCommit();
+
+        if (currentTagCommit && currentTagCommit !== currentHeadCommit) {
+            output.write(
+                [
+                    `Current version: ${currentVersion}`,
+                    `Tag ${currentTag} already exists on ${currentTagCommit.slice(0, 7)}.`,
+                    'Choose a version bump to release the latest commit safely.',
+                    '',
+                ].join('\n')
+            );
+            const releaseType = await promptReleaseType(currentVersion);
+            return bumpVersion(currentVersion, releaseType);
+        }
+
         const rl = readline.createInterface({ input, output });
 
         try {
@@ -198,6 +216,22 @@ function updateTemplateTag(nextTag) {
     }
 }
 
+function assertTagAvailable(tag, allowCurrentHeadTag) {
+    const tagCommit = getLocalTagCommit(tag);
+
+    if (!tagCommit) {
+        return;
+    }
+
+    if (allowCurrentHeadTag && tagCommit === getHeadCommit()) {
+        return;
+    }
+
+    throw new Error(
+        `Tag ${tag} already exists on ${tagCommit.slice(0, 7)}. Bump the version or move the tag before releasing.`
+    );
+}
+
 function readJson(filePath) {
     return JSON.parse(readFileSync(filePath, 'utf8'));
 }
@@ -246,6 +280,31 @@ function hasStagedChanges() {
             allowFailure: true,
         }).code === 1
     );
+}
+
+function createTagIfNeeded(tag) {
+    if (getLocalTagCommit(tag) === getHeadCommit()) {
+        return;
+    }
+
+    run('git', ['tag', tag]);
+}
+
+function getHeadCommit() {
+    return run('git', ['rev-parse', 'HEAD'], { capture: true }).trim();
+}
+
+function getLocalTagCommit(tag) {
+    const result = run('git', ['rev-parse', '--verify', tag], {
+        capture: true,
+        allowFailure: true,
+    });
+
+    if (result.code !== 0) {
+        return null;
+    }
+
+    return result.stdout.trim();
 }
 
 function isVersionPublished(version) {

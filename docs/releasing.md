@@ -27,6 +27,8 @@ Only `create-hsi-app` is published to public npm.
     - run `npm login --registry=https://registry.npmjs.org`
     - publish `packages/create-hsi-app` to public npm
     - skip the release commit if no version files changed
+    - require a version bump when the matching `v*` tag already exists on a
+      different commit
 
 ## Dry Run
 

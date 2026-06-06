@@ -10,7 +10,7 @@ import {
 import { basename, join, resolve } from 'node:path';
 
 const templateRepo = 'https://github.com/Hsiii/frontend-template.git';
-const templateTag = 'v0.1.5';
+const templateTag = 'v0.2.0';
 const defaultAppName = 'my-app';
 const packageManagers = ['bun', 'npm', 'pnpm', 'yarn'];
 const rawArgs = process.argv.slice(2);

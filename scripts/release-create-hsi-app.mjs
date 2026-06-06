@@ -210,11 +210,21 @@ function run(command, args, options = {}) {
     const stdio = options.capture ? 'pipe' : 'inherit';
 
     try {
-        return execFileSync(command, args, {
+        const result = execFileSync(command, args, {
             cwd: options.cwd ?? repoRoot,
             encoding: 'utf8',
             stdio,
         });
+
+        if (options.allowFailure) {
+            return {
+                code: 0,
+                stderr: '',
+                stdout: typeof result === 'string' ? result : '',
+            };
+        }
+
+        return result;
     } catch (error) {
         if (options.allowFailure) {
             return {

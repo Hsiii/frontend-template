@@ -34,13 +34,15 @@ export function fail(message) {
     process.exit(1);
 }
 
-export function ready(targetPath, lines) {
+export function ready(lines) {
     gap();
-    console.log(`└─ ${color.green('Ready')} ${targetPath}`);
-    console.log(`   ${color.dim('Next steps')}`);
+    console.log(`└─ ${color.green('Ready')}`);
+    console.log();
+    console.log(`${color.cyan('◇')}  Next steps`);
+    console.log(branch);
 
     for (const line of lines) {
-        console.log(`   ${line}`);
+        console.log(`${branch} ${formatCommand(line)}`);
     }
 }
 
@@ -66,4 +68,16 @@ function unwrapPrompt(value) {
     }
 
     return value;
+}
+
+function formatCommand(command) {
+    const [head, ...rest] = command.split(' ');
+
+    if (!head) {
+        return command;
+    }
+
+    const renderedTail = rest.length > 0 ? ` ${rest.join(' ')}` : '';
+
+    return `${color.green('$')} ${color.bold(head)}${renderedTail}`;
 }

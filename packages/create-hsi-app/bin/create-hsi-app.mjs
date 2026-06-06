@@ -81,7 +81,7 @@ async function main() {
 
     await maybeSetupRepo();
 
-    ready(targetPath, nextSteps());
+    ready(nextSteps());
 }
 
 function run(command, args, options = {}) {

@@ -8,8 +8,19 @@ import {
     writeFileSync,
 } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { stdin as input, stdout as output } from 'node:process';
-import readline from 'node:readline/promises';
+
+import {
+    confirm,
+    done,
+    fail,
+    intro,
+    renderNextSteps,
+    renderSummary,
+    select,
+    step,
+    text,
+    warn,
+} from './ui.mjs';
 
 const templateRepo = 'https://github.com/Hsiii/frontend-template.git';
 const templateTag = 'v0.5.2';
@@ -22,7 +33,7 @@ const shouldInstallDependencies = !(
     parsedArgs.noInstall || readNpmBooleanFlag('noinstall')
 );
 const shouldSkipRepoSetup = parsedArgs.noRepo || readNpmBooleanFlag('norepo');
-const isInteractive = input.isTTY && output.isTTY;
+const isInteractive = process.stdin.isTTY && process.stdout.isTTY;
 const targetArg = parsedArgs.targetArg ?? '.';
 const targetPath = resolve(targetArg);
 const appName = toPackageName(basename(targetPath));
@@ -36,8 +47,8 @@ async function main() {
         fail(`Target directory is not empty: ${targetPath}`);
     }
 
-    console.log(`\nScaffolding ${appName} in ${targetPath}\n`);
-    logStep('Cloning template');
+    intro(appName, targetPath);
+    step('Cloning template');
     run('git', [
         '-c',
         'advice.detachedHead=false',
@@ -58,44 +69,25 @@ async function main() {
 
     updatePackageJson();
     updateBunLock();
+    step('Customizing project files');
     updateAppText();
     updatePackageManagerFiles();
     writeAppReadme();
 
     if (shouldInstallDependencies) {
-        logStep(`Installing dependencies with ${selectedPackageManager}`);
+        step(`Installing dependencies with ${selectedPackageManager}`);
         installDependencies();
     }
 
     const repoSetup = await maybeSetupRepo();
 
-    console.log(`\nCreated ${appName} in ${targetPath}\n`);
-    console.log('Summary:');
-    console.log(`  Package manager: ${selectedPackageManager}`);
-    if (repoSetup === 'github') {
-        console.log('  Git: initialized locally and connected to GitHub');
-    } else if (repoSetup === 'local') {
-        console.log('  Git: initialized locally');
-    } else {
-        console.log('  Git: not initialized');
-    }
-    if (shouldInstallDependencies) {
-        console.log('  Dependencies: installed');
-    } else {
-        console.log('  Dependencies: not installed');
-    }
-    console.log('\nNext steps:');
-    if (targetArg !== '.') {
-        console.log(`  cd ${targetArg}`);
-    }
-    if (!shouldInstallDependencies) {
-        console.log(`  ${installCommand()}`);
-    }
-    console.log(`  ${devCommand()}`);
-}
-
-function logStep(message) {
-    console.log(`- ${message}`);
+    renderSummary([
+        `Package manager: ${selectedPackageManager}`,
+        `Git: ${gitSummary(repoSetup)}`,
+        `Dependencies: ${shouldInstallDependencies ? 'installed' : 'not installed'}`,
+    ]);
+    renderNextSteps(nextSteps());
+    done(appName);
 }
 
 function run(command, args, options = {}) {
@@ -261,53 +253,59 @@ async function maybeSetupRepo() {
         return null;
     }
 
-    const rl = readline.createInterface({ input, output });
+    const shouldCreateRepo = await confirm({
+        message: 'Create a git repository?',
+        initialValue: true,
+    });
 
-    try {
-        const shouldCreateRepo = await promptYesNo(
-            rl,
-            'Create a git repository?',
-            true
-        );
-
-        if (!shouldCreateRepo) {
-            return null;
-        }
-
-        initLocalRepo();
-
-        if (!canUseGitHubCli()) {
-            return 'local';
-        }
-
-        const defaultRepoName = basename(targetPath);
-        const repoName = await promptWithDefault(
-            rl,
-            'Repository name',
-            defaultRepoName
-        );
-        const visibility = await promptChoice(rl, 'Visibility', [
-            { label: 'private', value: 'private', default: true },
-            { label: 'public', value: 'public' },
-        ]);
-
-        run(
-            'gh',
-            [
-                'repo',
-                'create',
-                repoName,
-                `--${visibility}`,
-                '--source=.',
-                '--remote=origin',
-            ],
-            { cwd: targetPath }
-        );
-
-        return 'github';
-    } finally {
-        rl.close();
+    if (!shouldCreateRepo) {
+        return null;
     }
+
+    const hasGitHubCli = canUseGitHubCli();
+    step('Initializing local git repository', { last: !hasGitHubCli });
+    initLocalRepo();
+
+    if (!hasGitHubCli) {
+        warn(
+            'GitHub CLI is unavailable or not authenticated; keeping a local repository only.'
+        );
+        return 'local';
+    }
+
+    const defaultRepoName = basename(targetPath);
+    const repoName = await text({
+        message: 'Repository name',
+        defaultValue: defaultRepoName,
+        placeholder: defaultRepoName,
+        validate(value) {
+            return value.trim() ? undefined : 'Repository name is required.';
+        },
+    });
+    const visibility = await select({
+        message: 'Visibility',
+        options: [
+            { label: 'Private', value: 'private' },
+            { label: 'Public', value: 'public' },
+        ],
+        initialValue: 'private',
+    });
+
+    step('Creating GitHub repository', { last: true });
+    run(
+        'gh',
+        [
+            'repo',
+            'create',
+            repoName,
+            `--${visibility}`,
+            '--source=.',
+            '--remote=origin',
+        ],
+        { cwd: targetPath }
+    );
+
+    return 'github';
 }
 
 function initLocalRepo() {
@@ -325,62 +323,32 @@ function canUseGitHubCli() {
     );
 }
 
-async function promptYesNo(rl, label, defaultValue) {
-    const hint = defaultValue ? 'Y/n' : 'y/N';
-
-    while (true) {
-        const answer = (await rl.question(`${label} [${hint}] `))
-            .trim()
-            .toLowerCase();
-
-        if (!answer) {
-            return defaultValue;
-        }
-
-        if (['y', 'yes'].includes(answer)) {
-            return true;
-        }
-
-        if (['n', 'no'].includes(answer)) {
-            return false;
-        }
+function gitSummary(repoSetup) {
+    if (repoSetup === 'github') {
+        return 'initialized locally and connected to GitHub';
     }
+
+    if (repoSetup === 'local') {
+        return 'initialized locally';
+    }
+
+    return 'not initialized';
 }
 
-async function promptWithDefault(rl, label, defaultValue) {
-    const answer = (await rl.question(`${label} (${defaultValue}): `)).trim();
+function nextSteps() {
+    const steps = [];
 
-    return answer || defaultValue;
-}
-
-async function promptChoice(rl, label, choices) {
-    const renderedChoices = choices
-        .map((choice) =>
-            choice.default ? `${choice.label.toUpperCase()}` : choice.label
-        )
-        .join('/');
-
-    while (true) {
-        const answer = (await rl.question(`${label} (${renderedChoices}): `))
-            .trim()
-            .toLowerCase();
-
-        if (!answer) {
-            const defaultChoice = choices.find((choice) => choice.default);
-
-            if (defaultChoice) {
-                return defaultChoice.value;
-            }
-        }
-
-        const matchingChoice = choices.find(
-            (choice) => choice.label === answer || choice.value === answer
-        );
-
-        if (matchingChoice) {
-            return matchingChoice.value;
-        }
+    if (targetArg !== '.') {
+        steps.push(`cd ${targetArg}`);
     }
+
+    if (!shouldInstallDependencies) {
+        steps.push(installCommand());
+    }
+
+    steps.push(devCommand());
+
+    return steps;
 }
 
 function replaceInFile(filePath, searchValue, replacement) {
@@ -534,9 +502,4 @@ function securityNoteForPackageManager() {
         default:
             fail(`Unsupported package manager: ${selectedPackageManager}`);
     }
-}
-
-function fail(message) {
-    console.error(`create-hsi-app: ${message}`);
-    process.exit(1);
 }

@@ -12,7 +12,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import readline from 'node:readline/promises';
 
 const templateRepo = 'https://github.com/Hsiii/frontend-template.git';
-const templateTag = 'v0.3.0';
+const templateTag = 'v0.4.0';
 const defaultAppName = 'my-app';
 const packageManagers = ['bun', 'npm', 'pnpm', 'yarn'];
 const rawArgs = process.argv.slice(2);

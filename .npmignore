@@ -10,6 +10,7 @@ dist/
 
 # Repository automation
 .github/
+docs/
 packages/create-hsi-app/
 scripts/
 

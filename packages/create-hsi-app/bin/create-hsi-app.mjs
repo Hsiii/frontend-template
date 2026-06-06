@@ -38,6 +38,7 @@ run('git', [
 
 rmSync(join(targetPath, '.git'), { force: true, recursive: true });
 rmSync(join(targetPath, '.github'), { force: true, recursive: true });
+rmSync(join(targetPath, 'docs'), { force: true, recursive: true });
 rmSync(join(targetPath, 'packages'), { force: true, recursive: true });
 rmSync(join(targetPath, 'scripts'), { force: true, recursive: true });
 

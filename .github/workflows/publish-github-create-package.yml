@@ -1,6 +1,9 @@
 name: Publish GitHub Create Package
 
 on:
+    push:
+        tags:
+            - 'v*'
     workflow_dispatch:
 
 permissions:
@@ -20,6 +23,27 @@ jobs:
                   node-version: 24
                   registry-url: https://npm.pkg.github.com
                   scope: '@hsiii'
+
+            - name: Verify tag matches package version
+              run: |
+                  node <<'EOF'
+                  const fs = require('node:fs');
+                  const packageJson = JSON.parse(
+                    fs.readFileSync('packages/create-hsi-app/package.json', 'utf8')
+                  );
+                  const refName = process.env.GITHUB_REF_NAME;
+
+                  if (!refName) {
+                    process.exit(0);
+                  }
+
+                  const expectedTag = `v${packageJson.version}`;
+
+                  if (refName !== expectedTag) {
+                    console.error(`Expected tag ${expectedTag} but got ${refName}.`);
+                    process.exit(1);
+                  }
+                  EOF
 
             - name: Build scoped package
               run: |

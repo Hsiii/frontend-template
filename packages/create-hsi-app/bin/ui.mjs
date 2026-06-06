@@ -5,7 +5,7 @@ const branch = color.dim('│');
 
 export function intro(appName, targetPath) {
     prompts.intro(color.inverse(' create-hsi-app '));
-    console.log();
+    console.log(branch);
     console.log(
         `${color.cyan('◇')}  Scaffolding ${color.bold(appName)} in ${targetPath}`
     );
@@ -21,6 +21,10 @@ export function streamLine(line = '') {
     console.log(`${branch} ${line}`);
 }
 
+export function gap() {
+    console.log(branch);
+}
+
 export function warn(message) {
     prompts.log.warn(message);
 }
@@ -31,7 +35,7 @@ export function fail(message) {
 }
 
 export function ready(targetPath, lines) {
-    console.log(`${branch}`);
+    gap();
     console.log(`└─ ${color.green('Ready')} ${targetPath}`);
     console.log(`   ${color.dim('Next steps')}`);
 

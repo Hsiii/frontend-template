@@ -17,10 +17,6 @@ export function step(message, options = {}) {
     console.log(`${prefix} ${message}`);
 }
 
-export function streamLine(line = '') {
-    console.log(`${branch} ${line}`);
-}
-
 export function gap() {
     console.log(branch);
 }
@@ -35,14 +31,13 @@ export function fail(message) {
 }
 
 export function ready(lines) {
-    gap();
-    console.log(`└─ ${color.green('Ready')}`);
     console.log();
-    console.log(`${color.cyan('◇')}  Next steps`);
-    console.log(branch);
+    console.log(color.green('Ready'));
+    console.log();
+    console.log(color.magenta('Next steps'));
 
     for (const line of lines) {
-        console.log(`${branch} ${formatCommand(line)}`);
+        console.log(line);
     }
 }
 
@@ -68,16 +63,4 @@ function unwrapPrompt(value) {
     }
 
     return value;
-}
-
-function formatCommand(command) {
-    const [head, ...rest] = command.split(' ');
-
-    if (!head) {
-        return command;
-    }
-
-    const renderedTail = rest.length > 0 ? ` ${rest.join(' ')}` : '';
-
-    return `${color.green('$')} ${color.bold(head)}${renderedTail}`;
 }

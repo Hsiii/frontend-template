@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import {
     existsSync,
     readdirSync,
@@ -17,7 +17,6 @@ import {
     ready,
     select,
     step,
-    streamLine,
     text,
     warn,
 } from './ui.mjs';
@@ -48,8 +47,10 @@ async function main() {
     }
 
     intro(appName, targetPath);
+    const repoPlan = await planRepoSetup();
+
     step('Cloning template');
-    await runStreaming('git', [
+    run('git', [
         '-c',
         'advice.detachedHead=false',
         'clone',
@@ -76,10 +77,10 @@ async function main() {
 
     if (shouldInstallDependencies) {
         step(`Installing dependencies with ${selectedPackageManager}`);
-        await installDependencies();
+        installDependencies();
     }
 
-    await maybeSetupRepo();
+    await applyRepoPlan(repoPlan);
 
     ready(nextSteps());
 }
@@ -99,63 +100,6 @@ function run(command, args, options = {}) {
         const details = error.stderr?.toString().trim() || error.message;
         fail(`Failed to run: ${command} ${args.join(' ')}\n${details}`);
     }
-}
-
-async function runStreaming(command, args, options = {}) {
-    await new Promise((resolveRun, rejectRun) => {
-        const child = spawn(command, args, {
-            cwd: options.cwd,
-            stdio: ['ignore', 'pipe', 'pipe'],
-        });
-
-        pipeStream(child.stdout);
-        pipeStream(child.stderr);
-
-        child.on('error', (error) => {
-            rejectRun(error);
-        });
-
-        child.on('close', (code) => {
-            if (code === 0) {
-                resolveRun();
-                return;
-            }
-
-            rejectRun(
-                new Error(
-                    `Failed to run: ${command} ${args.join(' ')}\nExited with code ${code}.`
-                )
-            );
-        });
-    }).catch((error) => {
-        fail(error.message);
-    });
-}
-
-function pipeStream(stream) {
-    let buffer = '';
-
-    stream.setEncoding('utf8');
-    stream.on('data', (chunk) => {
-        buffer += chunk;
-
-        while (true) {
-            const newlineIndex = buffer.indexOf('\n');
-
-            if (newlineIndex === -1) {
-                break;
-            }
-
-            const line = buffer.slice(0, newlineIndex).replace(/\r$/, '');
-            streamLine(line);
-            buffer = buffer.slice(newlineIndex + 1);
-        }
-    });
-    stream.on('end', () => {
-        if (buffer) {
-            streamLine(buffer.replace(/\r$/, ''));
-        }
-    });
 }
 
 function updatePackageJson() {
@@ -247,19 +191,19 @@ function updatePackageManagerFiles() {
     }
 }
 
-async function installDependencies() {
+function installDependencies() {
     switch (selectedPackageManager) {
         case 'bun':
-            await runStreaming('bun', ['install'], { cwd: targetPath });
+            run('bun', ['install'], { cwd: targetPath });
             return;
         case 'npm':
-            await runStreaming('npm', ['install'], { cwd: targetPath });
+            run('npm', ['install'], { cwd: targetPath });
             return;
         case 'pnpm':
-            await runStreaming('pnpm', ['install'], { cwd: targetPath });
+            run('pnpm', ['install'], { cwd: targetPath });
             return;
         case 'yarn':
-            await runStreaming('yarn', ['install'], { cwd: targetPath });
+            run('yarn', ['install'], { cwd: targetPath });
             return;
         default:
             fail(`Unsupported package manager: ${selectedPackageManager}`);
@@ -299,7 +243,7 @@ ${securityNote}
     writeFileSync(join(targetPath, 'README.md'), readme);
 }
 
-async function maybeSetupRepo() {
+async function planRepoSetup() {
     if (shouldSkipRepoSetup || !isInteractive) {
         return null;
     }
@@ -315,15 +259,14 @@ async function maybeSetupRepo() {
     }
 
     const hasGitHubCli = canUseGitHubCli();
-    step('Initializing local git repository');
-    await initLocalRepo();
-    gap();
 
     if (!hasGitHubCli) {
         warn(
             'GitHub CLI is unavailable or not authenticated; keeping a local repository only.'
         );
-        return 'local';
+        return {
+            mode: 'local',
+        };
     }
 
     const defaultRepoName = basename(targetPath);
@@ -346,25 +289,42 @@ async function maybeSetupRepo() {
     });
     gap();
 
+    return {
+        mode: 'github',
+        repoName,
+        visibility,
+    };
+}
+
+async function applyRepoPlan(repoPlan) {
+    if (!repoPlan) {
+        return;
+    }
+
+    step('Initializing local git repository');
+    initLocalRepo();
+
+    if (repoPlan.mode !== 'github') {
+        return;
+    }
+
     step('Creating GitHub repository');
-    await runStreaming(
+    run(
         'gh',
         [
             'repo',
             'create',
-            repoName,
-            `--${visibility}`,
+            repoPlan.repoName,
+            `--${repoPlan.visibility}`,
             '--source=.',
             '--remote=origin',
         ],
         { cwd: targetPath }
     );
-
-    return 'github';
 }
 
-async function initLocalRepo() {
-    await runStreaming('git', ['init', '-b', 'main'], { cwd: targetPath });
+function initLocalRepo() {
+    run('git', ['init', '-b', 'main'], { cwd: targetPath });
     run('git', ['config', 'core.hooksPath', '.githooks'], { cwd: targetPath });
 }
 

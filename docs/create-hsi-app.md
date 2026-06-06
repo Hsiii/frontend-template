@@ -53,7 +53,8 @@ name.
 - `--pnpm`: use pnpm for the scaffolded app and write `pnpm-workspace.yaml`
 - `--yarn`: use Yarn for the scaffolded app and write `.yarnrc.yml`
 - `--noInstall`: skip the default dependency installation step
-- `--noRepo`: skip the interactive repository prompt and leave git uninitialized
+- `--noRepo`: skip the interactive repository prompt and leave git
+  uninitialized
 
 ## Examples
 
@@ -78,11 +79,17 @@ bun create hsi-app@latest my-dashboard --pnpm
 Skip dependency installation:
 
 ```bash
-npm create hsi-app@latest my-dashboard -- --noInstall
+npm create hsi-app@latest my-dashboard --noInstall
 ```
 
 Skip the repo prompt:
 
 ```bash
-npm create hsi-app@latest my-dashboard -- --noRepo
+npm create hsi-app@latest my-dashboard --noRepo
+```
+
+Skip both install and repo setup without additional `--` forwarding:
+
+```bash
+npm create hsi-app@latest my-dashboard --noRepo --noInstall
 ```

@@ -16,11 +16,14 @@ const templateTag = 'v0.5.0';
 const defaultAppName = 'my-app';
 const packageManagers = ['bun', 'npm', 'pnpm', 'yarn'];
 const rawArgs = process.argv.slice(2);
-const selectedPackageManager = resolvePackageManager(rawArgs);
-const shouldInstallDependencies = !rawArgs.includes('--noInstall');
-const shouldSkipRepoSetup = rawArgs.includes('--noRepo');
+const parsedArgs = parseCliArgs(rawArgs);
+const selectedPackageManager = resolvePackageManager(parsedArgs);
+const shouldInstallDependencies = !(
+    parsedArgs.noInstall || readNpmBooleanFlag('noinstall')
+);
+const shouldSkipRepoSetup = parsedArgs.noRepo || readNpmBooleanFlag('norepo');
 const isInteractive = input.isTTY && output.isTTY;
-const targetArg = rawArgs.find((arg) => !arg.startsWith('--')) ?? '.';
+const targetArg = parsedArgs.targetArg ?? '.';
 const targetPath = resolve(targetArg);
 const appName = toPackageName(basename(targetPath));
 
@@ -385,28 +388,69 @@ function toPackageName(value) {
     return name || defaultAppName;
 }
 
-function resolvePackageManager(args) {
-    const selectedFlags = args.filter((arg) =>
-        ['--bun', '--npm', '--pnpm', '--yarn'].includes(arg)
-    );
+function parseCliArgs(args) {
+    const parsedArgs = {
+        noInstall: false,
+        noRepo: false,
+        packageManager: null,
+        targetArg: null,
+    };
 
-    if (selectedFlags.length > 1) {
+    for (const arg of args) {
+        switch (arg) {
+            case '--bun':
+                setPackageManagerOverride(parsedArgs, 'bun');
+                continue;
+            case '--npm':
+                setPackageManagerOverride(parsedArgs, 'npm');
+                continue;
+            case '--pnpm':
+                setPackageManagerOverride(parsedArgs, 'pnpm');
+                continue;
+            case '--yarn':
+                setPackageManagerOverride(parsedArgs, 'yarn');
+                continue;
+            case '--noInstall':
+                parsedArgs.noInstall = true;
+                continue;
+            case '--noRepo':
+                parsedArgs.noRepo = true;
+                continue;
+            default:
+                if (arg.startsWith('--')) {
+                    fail(`Unsupported option: ${arg}`);
+                }
+
+                if (parsedArgs.targetArg) {
+                    fail(`Unexpected argument: ${arg}`);
+                }
+
+                parsedArgs.targetArg = arg;
+        }
+    }
+
+    return parsedArgs;
+}
+
+function setPackageManagerOverride(parsedArgs, packageManager) {
+    if (
+        parsedArgs.packageManager &&
+        parsedArgs.packageManager !== packageManager
+    ) {
         fail('Pass only one of --bun, --npm, --pnpm, or --yarn.');
     }
 
-    switch (selectedFlags[0]) {
-        case '--npm':
-            return 'npm';
-        case '--pnpm':
-            return 'pnpm';
-        case '--yarn':
-            return 'yarn';
-        case '--bun':
-        case undefined:
-            return 'bun';
-        default:
-            fail(`Unsupported package manager flag: ${selectedFlags[0]}`);
-    }
+    parsedArgs.packageManager = packageManager;
+}
+
+function resolvePackageManager(parsedArgs) {
+    return parsedArgs.packageManager ?? 'bun';
+}
+
+function readNpmBooleanFlag(name) {
+    const value = process.env[`npm_config_${name}`];
+
+    return value === 'true' || value === '';
 }
 
 function packageManagerDeclaration() {

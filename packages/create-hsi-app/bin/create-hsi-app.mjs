@@ -10,13 +10,14 @@ import {
 import { basename, join, resolve } from 'node:path';
 
 import {
+    closePrompts,
     confirm,
     fail,
     gap,
     intro,
     ready,
+    section,
     select,
-    step,
     text,
     warn,
 } from './ui.mjs';
@@ -48,8 +49,9 @@ async function main() {
 
     intro(appName, targetPath);
     const repoPlan = await planRepoSetup();
+    closePrompts();
 
-    step('Cloning template');
+    section('Cloning template');
     run('git', [
         '-c',
         'advice.detachedHead=false',
@@ -70,19 +72,21 @@ async function main() {
 
     updatePackageJson();
     updateBunLock();
-    step('Customizing project files');
+    console.log();
+    section('Customizing project files');
     updateAppText();
     updatePackageManagerFiles();
     writeAppReadme();
 
     if (shouldInstallDependencies) {
-        step(`Installing dependencies with ${selectedPackageManager}`);
+        console.log();
+        section(`Installing dependencies with ${selectedPackageManager}`);
         installDependencies();
     }
 
     await applyRepoPlan(repoPlan);
 
-    ready(nextSteps());
+    ready(appName, nextSteps());
 }
 
 function run(command, args, options = {}) {
@@ -301,14 +305,16 @@ async function applyRepoPlan(repoPlan) {
         return;
     }
 
-    step('Initializing local git repository');
+    console.log();
+    section('Initializing local git repository');
     initLocalRepo();
 
     if (repoPlan.mode !== 'github') {
         return;
     }
 
-    step('Creating GitHub repository');
+    console.log();
+    section('Creating GitHub repository');
     run(
         'gh',
         [

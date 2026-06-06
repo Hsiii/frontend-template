@@ -12,9 +12,13 @@ export function intro(appName, targetPath) {
     console.log(branch);
 }
 
-export function step(message, options = {}) {
-    const prefix = options.last ? '└─' : '├─';
-    console.log(`${prefix} ${message}`);
+export function closePrompts() {
+    console.log('└─');
+    console.log();
+}
+
+export function section(title) {
+    console.log(color.bold(color.magentaBright(title)));
 }
 
 export function gap() {
@@ -30,11 +34,12 @@ export function fail(message) {
     process.exit(1);
 }
 
-export function ready(lines) {
+export function ready(appName, lines) {
     console.log();
-    console.log(color.green('Ready'));
+    console.log(color.green(`App scaffolded: ${appName}`));
     console.log();
-    console.log(color.magenta('Next steps'));
+    console.log(color.magentaBright('Next steps'));
+    console.log();
 
     for (const line of lines) {
         console.log(line);

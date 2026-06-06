@@ -1,8 +1,9 @@
 # create-hsi-app
 
-Scaffold an opinionated Vite + React + TypeScript app with strict checks, curated defaults, and package-age gating for supply-chain security.
+Interactive CLI to kick start a frontend project.
 
 ## The Stack
+A opinionated web development stack focused on simplicity:
 
 - Vite
 - React 19
@@ -11,9 +12,9 @@ Scaffold an opinionated Vite + React + TypeScript app with strict checks, curate
 - Lucide React
 - ESLint with `eslint-config-complete`
 - Prettier with sorted imports
-- VS Code extension recommendations
+- VS Code extension recommendations for lint, format, spellcheck, and syntax highlighting
 - VS Code auto lint/format settings
-- Package-manager-specific package-age gating
+- Package-age gating for supply-chain security
 
 ## Getting Started
 
@@ -44,11 +45,4 @@ bun create hsi-app@latest
 ```
 
 Full CLI usage, flags, and repo/install behavior are documented in
-[`docs/create-hsi-app.md`](./docs/create-hsi-app.md).
-
-## Scripts
-
-- `dev`: start the Vite dev server
-- `build`: create a production build
-- `check`: run typecheck, lint, format verification, and production build
-- `preview`: serve the build locally
+[`docs/CLI.md`](./docs/CLI.md).

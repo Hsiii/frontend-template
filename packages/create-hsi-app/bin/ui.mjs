@@ -1,19 +1,17 @@
 import * as prompts from '@clack/prompts';
 import color from 'picocolors';
 
-const branch = color.dim('│');
-
 export function intro(appName, targetPath) {
     prompts.intro(color.inverse(' create-hsi-app '));
+    console.log();
     console.log(
         `${color.cyan('◇')}  Scaffolding ${color.bold(appName)} in ${targetPath}`
     );
-    console.log(branch);
+    console.log();
 }
 
-export function step(message, options = {}) {
-    const prefix = options.last ? '└─' : '├─';
-    console.log(`${prefix} ${message}`);
+export function step(message) {
+    console.log(`${color.dim('•')} ${message}`);
 }
 
 export function warn(message) {
@@ -25,16 +23,13 @@ export function fail(message) {
     process.exit(1);
 }
 
-export function done(appName) {
-    prompts.outro(color.green(`Success. Created ${appName}`));
-}
+export function ready(targetPath, lines) {
+    console.log();
+    console.log(`${color.green('Ready:')} ${targetPath}`);
 
-export function renderSummary(lines) {
-    prompts.note(lines.join('\n'), 'Summary');
-}
-
-export function renderNextSteps(lines) {
-    prompts.note(lines.join('\n'), 'Next steps');
+    for (const line of lines) {
+        console.log(`  ${line}`);
+    }
 }
 
 export async function confirm(options) {

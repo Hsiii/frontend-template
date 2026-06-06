@@ -11,11 +11,9 @@ import { basename, join, resolve } from 'node:path';
 
 import {
     confirm,
-    done,
     fail,
     intro,
-    renderNextSteps,
-    renderSummary,
+    ready,
     select,
     step,
     text,
@@ -79,15 +77,9 @@ async function main() {
         installDependencies();
     }
 
-    const repoSetup = await maybeSetupRepo();
+    await maybeSetupRepo();
 
-    renderSummary([
-        `Package manager: ${selectedPackageManager}`,
-        `Git: ${gitSummary(repoSetup)}`,
-        `Dependencies: ${shouldInstallDependencies ? 'installed' : 'not installed'}`,
-    ]);
-    renderNextSteps(nextSteps());
-    done(appName);
+    ready(targetPath, nextSteps());
 }
 
 function run(command, args, options = {}) {
@@ -263,7 +255,7 @@ async function maybeSetupRepo() {
     }
 
     const hasGitHubCli = canUseGitHubCli();
-    step('Initializing local git repository', { last: !hasGitHubCli });
+    step('Initializing local git repository');
     initLocalRepo();
 
     if (!hasGitHubCli) {
@@ -291,7 +283,7 @@ async function maybeSetupRepo() {
         initialValue: 'private',
     });
 
-    step('Creating GitHub repository', { last: true });
+    step('Creating GitHub repository');
     run(
         'gh',
         [
@@ -321,18 +313,6 @@ function canUseGitHubCli() {
             allowFailure: true,
         })
     );
-}
-
-function gitSummary(repoSetup) {
-    if (repoSetup === 'github') {
-        return 'initialized locally and connected to GitHub';
-    }
-
-    if (repoSetup === 'local') {
-        return 'initialized locally';
-    }
-
-    return 'not initialized';
 }
 
 function nextSteps() {

@@ -48,8 +48,8 @@ async function main() {
     }
 
     intro(appName, targetPath);
-    shouldInstallDependencies = await planInstallDependencies();
     const repoPlan = await planRepoSetup();
+    shouldInstallDependencies = await planInstallDependencies();
     closePrompts();
 
     section('Cloning template');

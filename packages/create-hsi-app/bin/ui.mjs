@@ -1,17 +1,24 @@
 import * as prompts from '@clack/prompts';
 import color from 'picocolors';
 
+const branch = color.dim('│');
+
 export function intro(appName, targetPath) {
     prompts.intro(color.inverse(' create-hsi-app '));
     console.log();
     console.log(
         `${color.cyan('◇')}  Scaffolding ${color.bold(appName)} in ${targetPath}`
     );
-    console.log();
+    console.log(branch);
 }
 
-export function step(message) {
-    console.log(`${color.dim('•')} ${message}`);
+export function step(message, options = {}) {
+    const prefix = options.last ? '└─' : '├─';
+    console.log(`${prefix} ${message}`);
+}
+
+export function streamLine(line = '') {
+    console.log(`${branch} ${line}`);
 }
 
 export function warn(message) {
@@ -24,11 +31,12 @@ export function fail(message) {
 }
 
 export function ready(targetPath, lines) {
-    console.log();
-    console.log(`${color.green('Ready:')} ${targetPath}`);
+    console.log(`${branch}`);
+    console.log(`└─ ${color.green('Ready')} ${targetPath}`);
+    console.log(`   ${color.dim('Next steps')}`);
 
     for (const line of lines) {
-        console.log(`  ${line}`);
+        console.log(`   ${line}`);
     }
 }
 

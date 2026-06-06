@@ -10,7 +10,7 @@ import {
 import { basename, join, resolve } from 'node:path';
 
 const templateRepo = 'https://github.com/Hsiii/frontend-template.git';
-const templateTag = 'v0.1.4';
+const templateTag = 'v0.1.5';
 const defaultAppName = 'my-app';
 const targetArg = process.argv[2] ?? defaultAppName;
 const targetPath = resolve(targetArg);

@@ -1,0 +1,61 @@
+name: Publish GitHub Create Package
+
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    packages: write
+
+jobs:
+    publish-create-alias:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v4
+
+            - name: Set up Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  registry-url: https://npm.pkg.github.com
+                  scope: '@hsiii'
+
+            - name: Build scoped package
+              run: |
+                  node <<'EOF'
+                  const fs = require('node:fs');
+                  const path = require('node:path');
+
+                  const sourceDir = path.resolve('packages/create-hsi-app');
+                  const outputDir = path.resolve('.tmp-github-create-hsi-app');
+
+                  fs.mkdirSync(path.join(outputDir, 'bin'), { recursive: true });
+                  fs.copyFileSync(
+                    path.join(sourceDir, 'bin', 'create-hsi-app.mjs'),
+                    path.join(outputDir, 'bin', 'create-hsi-app.mjs')
+                  );
+
+                  const packageJsonPath = path.join(sourceDir, 'package.json');
+                  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+                  packageJson.name = '@hsiii/create-hsi-app';
+                  packageJson.repository = {
+                    type: 'git',
+                    url: 'git+https://github.com/Hsiii/frontend-template.git'
+                  };
+                  packageJson.publishConfig = {
+                    registry: 'https://npm.pkg.github.com'
+                  };
+
+                  fs.writeFileSync(
+                    path.join(outputDir, 'package.json'),
+                    `${JSON.stringify(packageJson, null, 4)}\n`
+                  );
+                  EOF
+
+            - name: Publish scoped package
+              run: npm publish
+              working-directory: .tmp-github-create-hsi-app
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -2,6 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import {
     existsSync,
+    mkdirSync,
     readdirSync,
     readFileSync,
     rmSync,
@@ -26,9 +27,11 @@ const templateRepo = 'https://github.com/Hsiii/frontend-template.git';
 const templateTag = 'v0.5.2';
 const defaultAppName = 'my-app';
 const packageManagers = ['bun', 'npm', 'pnpm', 'yarn'];
+const nextVersion = '16.2.7';
 const rawArgs = process.argv.slice(2);
 const parsedArgs = parseCliArgs(rawArgs);
 const selectedPackageManager = resolvePackageManager(parsedArgs);
+let selectedFramework = resolveFramework(parsedArgs);
 let shouldInstallDependencies = !(
     parsedArgs.noInstall || readNpmBooleanFlag('noinstall')
 );
@@ -48,11 +51,12 @@ async function main() {
     }
 
     intro(appName, targetPath);
+    selectedFramework = await planFramework();
     const repoPlan = await planRepoSetup();
     shouldInstallDependencies = await planInstallDependencies();
     closePrompts();
 
-    section('Cloning template');
+    section(`Cloning ${frameworkLabel(selectedFramework)} template`);
     run('git', [
         '-c',
         'advice.detachedHead=false',
@@ -75,14 +79,15 @@ async function main() {
     updateBunLock();
     console.log();
     section('Customizing project files');
+    console.log(`- framework: ${frameworkLabel(selectedFramework)}`);
     console.log(`- package.json: name, version, scripts, packageManager`);
-    console.log(`- index.html: title`);
-    console.log(`- src/components/App.tsx: app name`);
+    logFrameworkFileChanges();
     console.log(`- README.md: install/dev/check commands`);
     console.log(`- package manager config: ${packageManagerConfigFile()}`);
     if (selectedPackageManager === 'bun') {
         console.log(`- bun.lock: package name`);
     }
+    updateFrameworkFiles();
     updateAppText();
     updatePackageManagerFiles();
     writeAppReadme();
@@ -127,8 +132,20 @@ function updatePackageJson() {
     delete packageJson.engines;
     delete packageJson.scripts.prepare;
     delete packageJson.scripts.release;
-    packageJson.scripts.check =
-        'tsc -p tsconfig.json --noEmit && eslint . && prettier . --check && vite build';
+    if (selectedFramework === 'next') {
+        packageJson.scripts.dev = 'next dev';
+        packageJson.scripts.build = 'next build';
+        packageJson.scripts.preview = 'next start';
+        packageJson.scripts.check =
+            'tsc -p tsconfig.json --noEmit && eslint . && prettier . --check && next build';
+        packageJson.dependencies.next = nextVersion;
+        packageJson.devDependencies['@next/eslint-plugin-next'] = nextVersion;
+        delete packageJson.devDependencies['@vitejs/plugin-react'];
+        delete packageJson.devDependencies.vite;
+    } else {
+        packageJson.scripts.check =
+            'tsc -p tsconfig.json --noEmit && eslint . && prettier . --check && vite build';
+    }
     packageJson.packageManager = packageManagerDeclaration();
 
     writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 4)}\n`);
@@ -155,20 +172,23 @@ function updateBunLock() {
 }
 
 function updateAppText() {
-    replaceInFile(
-        join(targetPath, 'index.html'),
-        '<title>Frontend Template</title>',
-        {
-            with: `<title>${appName}</title>`,
-        }
-    );
-    replaceInFile(
-        join(targetPath, 'src/components/App.tsx'),
-        '>Frontend Template<',
-        {
-            with: `>${appName}<`,
-        }
-    );
+    if (selectedFramework === 'vite') {
+        replaceInFile(
+            join(targetPath, 'index.html'),
+            '<title>Frontend Template</title>',
+            {
+                with: `<title>${appName}</title>`,
+            }
+        );
+    }
+
+    writeFileSync(join(targetPath, 'src/components/App.tsx'), appComponent());
+}
+
+function updateFrameworkFiles() {
+    if (selectedFramework === 'next') {
+        writeNextAppFiles();
+    }
 }
 
 function updatePackageManagerFiles() {
@@ -230,7 +250,7 @@ function writeAppReadme() {
     const securityNote = securityNoteForPackageManager();
     const readme = `# ${appName}
 
-Created from the frontend template.
+Created from the ${frameworkLabel(selectedFramework)} frontend template.
 
 ## Install
 
@@ -254,6 +274,24 @@ ${securityNote}
 `;
 
     writeFileSync(join(targetPath, 'README.md'), readme);
+}
+
+async function planFramework() {
+    if (parsedArgs.framework || !isInteractive) {
+        return selectedFramework;
+    }
+
+    const framework = await select({
+        message: 'Framework',
+        options: [
+            { label: 'Vite', value: 'vite' },
+            { label: 'Next.js', value: 'next' },
+        ],
+        initialValue: 'vite',
+    });
+    gap();
+
+    return framework;
 }
 
 async function planInstallDependencies() {
@@ -416,6 +454,7 @@ function toPackageName(value) {
 
 function parseCliArgs(args) {
     const parsedArgs = {
+        framework: null,
         noInstall: false,
         noRepo: false,
         packageManager: null,
@@ -424,6 +463,12 @@ function parseCliArgs(args) {
 
     for (const arg of args) {
         switch (arg) {
+            case '--vite':
+                setFrameworkOverride(parsedArgs, 'vite');
+                continue;
+            case '--next':
+                setFrameworkOverride(parsedArgs, 'next');
+                continue;
             case '--bun':
                 setPackageManagerOverride(parsedArgs, 'bun');
                 continue;
@@ -458,6 +503,14 @@ function parseCliArgs(args) {
     return parsedArgs;
 }
 
+function setFrameworkOverride(parsedArgs, framework) {
+    if (parsedArgs.framework && parsedArgs.framework !== framework) {
+        fail('Pass only one of --vite or --next.');
+    }
+
+    parsedArgs.framework = framework;
+}
+
 function setPackageManagerOverride(parsedArgs, packageManager) {
     if (
         parsedArgs.packageManager &&
@@ -473,10 +526,293 @@ function resolvePackageManager(parsedArgs) {
     return parsedArgs.packageManager ?? 'bun';
 }
 
+function resolveFramework(parsedArgs) {
+    return parsedArgs.framework ?? 'vite';
+}
+
 function readNpmBooleanFlag(name) {
     const value = process.env[`npm_config_${name}`];
 
     return value === 'true' || value === '';
+}
+
+function logFrameworkFileChanges() {
+    if (selectedFramework === 'next') {
+        console.log(
+            `- Next app router files: src/app/layout.tsx, src/app/page.tsx`
+        );
+        console.log(`- src/app/global.css: app styles`);
+        console.log(`- Next config: next.config.mjs, next-env.d.ts`);
+        console.log(
+            `- Vite files removed: index.html, vite.config.mjs, src/main.tsx`
+        );
+        return;
+    }
+
+    console.log(`- index.html: title`);
+    console.log(`- src/components/App.tsx: app name`);
+}
+
+function writeNextAppFiles() {
+    rmSync(join(targetPath, 'index.html'), { force: true });
+    rmSync(join(targetPath, 'vite.config.mjs'), { force: true });
+    rmSync(join(targetPath, 'src/main.tsx'), { force: true });
+    rmSync(join(targetPath, 'src/vite-env.d.ts'), { force: true });
+    rmSync(join(targetPath, 'src/global.css'), { force: true });
+
+    const appPath = join(targetPath, 'src/app');
+    mkdirSync(appPath, { recursive: true });
+
+    writeFileSync(join(targetPath, 'next-env.d.ts'), nextEnvTypes());
+    writeFileSync(join(targetPath, 'next.config.mjs'), nextConfig());
+    writeFileSync(join(targetPath, 'eslint.config.mjs'), nextEslintConfig());
+    writeFileSync(join(targetPath, 'tsconfig.json'), nextTsconfig());
+    writeFileSync(join(appPath, 'layout.tsx'), nextLayout());
+    writeFileSync(join(appPath, 'page.tsx'), nextPage());
+    writeFileSync(join(appPath, 'global.css'), nextGlobalCss());
+}
+
+function frameworkLabel(framework) {
+    switch (framework) {
+        case 'vite':
+            return 'Vite';
+        case 'next':
+            return 'Next.js';
+        default:
+            fail(`Unsupported framework: ${framework}`);
+    }
+}
+
+function frameworkTitle(framework) {
+    switch (framework) {
+        case 'vite':
+            return 'Vite, React, and TypeScript.';
+        case 'next':
+            return 'Next.js, React, and TypeScript.';
+        default:
+            fail(`Unsupported framework: ${framework}`);
+    }
+}
+
+function appComponent() {
+    return `import type { JSX } from 'react';
+
+export function App(): JSX.Element {
+    return (
+        <main className='app'>
+            <section className='app__content'>
+                <p className='app__eyebrow'>${appName}</p>
+                <h1 className='app__title'>${frameworkTitle(selectedFramework)}</h1>
+                <p className='app__description'>
+                    A clean baseline with strict tooling, useful tokens, and no
+                    unnecessary UI noise.
+                </p>
+            </section>
+        </main>
+    );
+}
+`;
+}
+
+function nextEnvTypes() {
+    return `/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+
+// This file should not be edited.
+`;
+}
+
+function nextConfig() {
+    return `/** @type {import("next").NextConfig} */
+const nextConfig = {};
+
+export default nextConfig;
+`;
+}
+
+function nextEslintConfig() {
+    return `import nextPlugin from '@next/eslint-plugin-next';
+import { completeConfigBase } from 'eslint-config-complete';
+
+export default [
+    ...completeConfigBase,
+
+    {
+        ignores: ['.next/**', 'node_modules/**'],
+    },
+
+    {
+        plugins: {
+            '@next/next': nextPlugin,
+        },
+        rules: {
+            ...nextPlugin.configs.recommended.rules,
+            ...nextPlugin.configs['core-web-vitals'].rules,
+            '@stylistic/quotes': [
+                'error',
+                'single',
+                {
+                    avoidEscape: true,
+                },
+            ],
+            'import-x/no-unassigned-import': [
+                'error',
+                {
+                    allow: ['**/*.css'],
+                },
+            ],
+        },
+    },
+
+    {
+        files: ['src/app/**/*.tsx'],
+        rules: {
+            'import-x/no-default-export': 'off',
+        },
+    },
+];
+`;
+}
+
+function nextTsconfig() {
+    return `{
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["DOM", "DOM.Iterable", "ES2022"],
+        "allowJs": false,
+        "skipLibCheck": true,
+        "strict": true,
+        "noEmit": true,
+        "esModuleInterop": true,
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "jsx": "react-jsx",
+        "incremental": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "plugins": [
+            {
+                "name": "next"
+            }
+        ],
+        "paths": {
+            "@/*": ["./src/*"]
+        }
+    },
+    "include": [
+        "next-env.d.ts",
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        ".next/dev/types/**/*.ts",
+        ".next/types/**/*.ts"
+    ],
+    "exclude": ["node_modules"]
+}
+`;
+}
+
+function nextLayout() {
+    return `import type { JSX, ReactNode } from 'react';
+import type { Metadata } from 'next';
+
+import './global.css';
+
+export const metadata: Metadata = {
+    title: '${appName}',
+    description: 'Created from create-hsi-app.',
+};
+
+interface RootLayoutProps {
+    readonly children: ReactNode;
+}
+
+export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
+    return (
+        <html lang='en'>
+            <body>{children}</body>
+        </html>
+    );
+}
+`;
+}
+
+function nextPage() {
+    return `import type { JSX } from 'react';
+
+import { App } from '@/components/App';
+
+export default function HomePage(): JSX.Element {
+    return <App />;
+}
+`;
+}
+
+function nextGlobalCss() {
+    return `@import '../constants/color.css';
+@import '../constants/font.css';
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    background-color: var(--clr-bg);
+    color: var(--clr-text);
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    font: var(--font-body-md);
+    line-height: 1.5;
+    background-color: var(--clr-bg);
+}
+
+a {
+    color: inherit;
+}
+
+:focus-visible {
+    outline: calc(var(--space-16) / 8) solid var(--clr-accent);
+    outline-offset: calc(var(--space-16) / 8);
+}
+
+.app {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: var(--space-32) var(--space-24);
+}
+
+.app__content {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-16);
+    width: fit-content;
+    max-width: 100%;
+    text-align: center;
+}
+
+.app__eyebrow {
+    color: var(--clr-text-muted);
+    font: var(--font-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.app__title {
+    font: var(--font-display);
+}
+
+.app__description {
+    color: var(--clr-text-muted);
+}
+`;
 }
 
 function packageManagerDeclaration() {

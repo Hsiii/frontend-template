@@ -4,9 +4,11 @@ Interactive CLI to kick start a frontend project.
 
 ## The Stack
 
-A opinionated web development stack focused on simplicity:
+Choose Vite or Next.js, then scaffold an opinionated web development stack
+focused on simplicity:
 
 - Vite
+- Next.js App Router
 - React 19
 - TypeScript 6
 - TanStack React Query

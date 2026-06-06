@@ -14,10 +14,15 @@ const rawArgs = process.argv.slice(2);
 const passthroughArgs = [];
 let shouldSkipInstall = false;
 let packageManager = 'bun';
+let framework = 'vite';
 
 for (const arg of rawArgs) {
     if (arg === '--noInstall') {
         shouldSkipInstall = true;
+    }
+
+    if (['--vite', '--next'].includes(arg)) {
+        framework = arg.slice(2);
     }
 
     if (['--bun', '--npm', '--pnpm', '--yarn'].includes(arg)) {
@@ -35,10 +40,19 @@ if (!hasExplicitPackageManager) {
     passthroughArgs.unshift('--bun');
 }
 
+const hasExplicitFramework = rawArgs.some((arg) =>
+    ['--vite', '--next'].includes(arg)
+);
+
+if (!hasExplicitFramework) {
+    passthroughArgs.unshift('--vite');
+}
+
 const smokeRoot = mkdtempSync(join(tmpdir(), 'create-hsi-app-smoke-'));
 const targetPath = join(smokeRoot, 'app');
 
 console.log(`Smoke target: ${targetPath}`);
+console.log(`Framework: ${framework}`);
 console.log(
     `Running: node ${cliScriptPath} ${[...passthroughArgs, targetPath].join(' ')}`
 );

@@ -1,6 +1,7 @@
 # create-hsi-app
 
-Scaffold a new Vite + React + TypeScript app from the frontend template.
+Scaffold a new Vite or Next.js + React + TypeScript app from the frontend
+template.
 
 ## Usage
 
@@ -29,4 +30,4 @@ bun create hsi-app@latest
 ```
 
 Full CLI usage, flags, and repo/install behavior:
-[docs/create-hsi-app.md](https://github.com/Hsiii/frontend-template/blob/main/docs/create-hsi-app.md)
+[docs/CLI.md](https://github.com/Hsiii/frontend-template/blob/main/docs/CLI.md)

@@ -297,6 +297,7 @@ async function maybeSetupRepo() {
 
 function initLocalRepo() {
     run('git', ['init', '-b', 'main'], { cwd: targetPath });
+    run('git', ['config', 'core.hooksPath', '.githooks'], { cwd: targetPath });
 }
 
 function canUseGitHubCli() {

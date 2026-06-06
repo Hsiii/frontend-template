@@ -43,6 +43,8 @@ name.
   `--noRepo` is passed.
 - When `gh auth status` succeeds, repo setup uses GitHub CLI to create a remote
   and add `origin`. Otherwise it falls back to a local git repository only.
+- When a git repository is created, `.githooks/pre-commit` is configured to run
+  formatting and lint checks before commits.
 
 ## Options
 

@@ -16,6 +16,7 @@ Scaffold an opinionated Vite + React + TypeScript app with strict checks, curate
 - Package-manager-specific package-age gating
 
 ## Getting Started
+
 Run any one of these:
 
 ### npm

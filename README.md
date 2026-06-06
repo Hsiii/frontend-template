@@ -48,7 +48,7 @@ Release flow:
 2. Update `templateTag` in
    [packages/create-hsi-app/bin/create-hsi-app.mjs](/Users/hsi/Documents/Projects/Archive/frontend-template/packages/create-hsi-app/bin/create-hsi-app.mjs:12)
    to the matching tag, then run `bun run check`.
-3. Create and push the matching git tag, for example `v0.1.3`.
+3. Create and push the matching git tag, for example `v0.1.4`.
 4. Publish npm: `cd packages/create-hsi-app && npm publish --registry=https://registry.npmjs.org`.
 5. Publish GitHub Packages alias as `@hsiii/create-hsi-app`. GitHub Packages
    only supports scoped npm package names, so this mirror must stay scoped.

@@ -10,7 +10,7 @@ import {
 import { basename, join, resolve } from 'node:path';
 
 const templateRepo = 'https://github.com/Hsiii/frontend-template.git';
-const templateTag = 'v0.1.3';
+const templateTag = 'v0.1.4';
 const defaultAppName = 'my-app';
 const targetArg = process.argv[2] ?? defaultAppName;
 const targetPath = resolve(targetArg);
@@ -21,6 +21,8 @@ if (existsSync(targetPath) && readdirSync(targetPath).length > 0) {
 }
 
 run('git', [
+    '-c',
+    'advice.detachedHead=false',
     'clone',
     '--branch',
     templateTag,

@@ -1,6 +1,6 @@
 {
     "name": "create-hsi-app",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "type": "module",
     "description": "Create a new app from the frontend template.",
     "bin": {
